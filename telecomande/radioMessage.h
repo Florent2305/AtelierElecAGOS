@@ -2,6 +2,7 @@
 #ifndef RADIOMESSAGE_h // Directive pour l'inclusion conditionnelle de ce fichier d'en-tête
 #define RADIOMESSAGE_h // Directive pour marquer le début de la définition du fichier d'en-tête
 
+
 // Énumération pour définir les commandes possibles du message radio
 typedef enum 
 {
