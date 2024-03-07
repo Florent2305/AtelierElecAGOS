@@ -118,14 +118,16 @@ private:
     uint8_t m_changed;
 
     /**
-     * @brief Valeurs minimale et maximale de l'axe X lues lors du calibrage
-     */
+     * @brief Valeurs minimale, à l'origine, et maximale de l'axe X lues lors du calibrage
+     */     
+    int16_t m_xMin;
     int16_t m_xOri;
     int16_t m_xMax;
 
     /**
-     * @brief Valeurs minimale et maximale de l'axe Y lues lors du calibrage
+     * @brief Valeurs minimale, à l'origine, et maximale de l'axe Y lues lors du calibrage
      */
+    int16_t m_yMin;
     int16_t m_yOri;
     int16_t m_yMax;
 };
@@ -147,8 +149,10 @@ joypad::joypad()
     m_oldPressed = 0;
     m_changed = 0;
 
-    m_xOri = ((1 << 10) - 1) >> 1;   // Valeur initiale pour la valeur à l'origine de l'axe X
-    m_xMax = (1 << 10) - 1;          // Valeur initiale pour la valeur maximale de l'axe X
+    m_xMin = 0;                      // Valeur initiale pour la valeur minimale de l'axe X
+    m_xOri = ((1 << 10) - 1) >> 2;   // Valeur initiale pour la valeur à l'origine de l'axe X
+    m_xMax = ((1 << 10) - 1) >> 1;   // Valeur initiale pour la valeur maximale de l'axe X
+    m_yMin = m_xMin;                 // Valeur initiale pour la valeur minimale de l'axe Y
     m_yOri = m_xOri;                 // Valeur initiale pour la valeur à l'origine de l'axe Y
     m_yMax = m_xMax;                 // Valeur initiale pour la valeur maximale de l'axe Y
 }
@@ -159,8 +163,8 @@ joypad::~joypad() {}
 // **Définition de la fonction de calibration**
 void joypad::calibration(uint8_t const & pin)
 {
-    m_xOri = analogRead(A0);
-    m_yOri = analogRead(A1);
+    m_xOri = analogRead(A0) >> 1;
+    m_yOri = analogRead(A1) >> 1;
 
     m_xMax = 0;
     m_yMax = 0;
@@ -170,27 +174,45 @@ void joypad::calibration(uint8_t const & pin)
     // Attend que le bouton 'pin' soit pressé pour arrêter le calibrage
     while (digitalRead(pin))
     {
-        int x = abs(analogRead(A0));
-        int y = abs(analogRead(A1));
+        int x = analogRead(A0) >> 1;
+        int y = analogRead(A1) >> 1;
 
         m_xMax = x > m_xMax ? x : m_xMax;
         m_yMax = y > m_yMax ? y : m_yMax;
+
+        m_xMin = x < m_xMin ? x : m_xMin;
+        m_yMin = y < m_yMin ? y : m_yMin;
     }
 }
 
 // **Définition de la fonction de lecture des axes**
 void joypad::getAxis(int8_t &x, int8_t &y)
 {
-    int16_t ax = analogRead(A0) - m_xOri; // Valeur lue sur l'axe X corrigée par la valeur minimale
-    int16_t ay = analogRead(A1) - m_yOri; // Valeur lue sur l'axe Y corrigée par la valeur maximale
+    int16_t ax = analogRead(A0) >> 1; // Valeur lue sur l'axe X corrigée du LSB
+    int16_t ay = analogRead(A1) >> 1; // Valeur lue sur l'axe Y corrigée du LSB
     
     Serial.println(m_xOri);
     Serial.println(m_yOri);
     Serial.println(ax);
     Serial.println(ay);
 
-    x = map(ax, -m_xMax, +m_xMax, -100, +100); // Mappage de la valeur de l'axe X entre -100 et 100
-    y = map(ay, -m_yMax, +m_yMax, -100, +100); // Mappage de la valeur de l'axe Y entre -100 et 100
+    if(ax < m_xOri)
+    {
+        x = map(ax, m_xMin, m_xOri, -100, 0); // Mappage de la valeur de l'axe X entre -100 et 0
+    }
+    else 
+    {
+        x = map(ax, m_xOri, m_xMax,  0, 100); // Mappage de la valeur de l'axe X entre   0 et 100
+    }
+
+    if(ay < m_yOri)
+    {
+        y = map(ay, m_yMin, m_yOri, -100, 0); // Mappage de la valeur de l'axe Y entre -100 et 0
+    }
+    else 
+    {
+        y = map(ay, m_yOri, m_yMax,  0, 100); // Mappage de la valeur de l'axe Y entre   0 et 100
+    }
 
     Serial.println(x);
     Serial.println(y);
@@ -200,7 +222,7 @@ void joypad::getAxis(int8_t &x, int8_t &y)
 uint8_t joypad::getButton()
 {
     // Combine les broches des boutons A à K dans un masque binaire
-    uint8_t buttonMap = ~((PINB >> 2) | (PIND << 6));
+    uint8_t buttonMap = ~((PIND >> 2) | ((PINB << 6) ) );
     Serial.println(buttonMap, HEX);
     Serial.println(PIND, HEX);
     // Détecte les changements d'état par comparaison avec la lecture précédente
@@ -263,7 +285,7 @@ inline void joypad::check()
             Serial.println(y);
             Serial.print('\n');
 
-        delay(1000);
+        delay(500);
     }
 
 }

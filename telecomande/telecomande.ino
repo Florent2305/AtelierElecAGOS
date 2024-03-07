@@ -71,26 +71,33 @@ void setup()
   Serial.begin(115200);
   while (!Serial) {} // some boards need to wait to ensure access to serial over USB  
 #endif
-    Serial.println(F("Hello"));
-    //radio.setPALevel(radioPowerLevel);
-    //radio.setPayloadSize(sizeof(msg));
+    Serial.println(F("Hello0"));
+    radio.begin();
+    Serial.println(F("Hello1"));
+    radio.setPALevel(radioPowerLevel);
+    Serial.println(F("Hello2"));
+    radio.setPayloadSize(sizeof(msg));
+    Serial.println(F("Hello3"));
 
     /**
      * @brief Définit l'adresse TX du noeud récepteur dans le tuyau TX
      */
-    //radio.openWritingPipe(address[1]);
+    radio.openWritingPipe(address[1]);
+    Serial.println(F("Hello4"));
 
     /**
      * @brief Définit l'adresse RX du noeud émetteur dans un tuyau RX
      */
-    //radio.openReadingPipe(1, address[0]); // set the RX address of the TX node into a RX pipe
+    radio.openReadingPipe(1, address[0]); // set the RX address of the TX node into a RX pipe
+    Serial.println(F("Hello5"));
 
   /**
    * @brief Met la radio en mode écoute
    */
-    //radio.startListening();
+  radio.startListening();
+  Serial.println(F("Hello6"));
     
-    Serial.println(F("Setup finish"));
+  Serial.println(F("Setup finish"));
 }
 
 /**
@@ -101,6 +108,7 @@ void setup()
  */
 void loop()
 {
+    manette.calibration(pinBoutonA);
     Serial.println(F("Loop begins"));
     manette.check();
     Serial.println(F("Manette check finish"));
