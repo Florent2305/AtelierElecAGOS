@@ -4,10 +4,10 @@
 
 typedef enum 
 {
-	PA_MIN = 1,
-	PA_LOW = 2,
-	PA_MAX = 4,
-	RESET  = 8
+    PA_MIN = 1,
+    PA_LOW = 2,
+    PA_MAX = 4,
+    RESET  = 8
 } radioCmd;
 
 
@@ -22,7 +22,5 @@ typedef struct
 inline char computeCheck  (radioMessage const & msg) { return msg.cmd ^ msg.gauche ^ msg.droit; }
 inline void assignCheck   (radioMessage       & msg) { msg.check = computeCheck(msg); }
 inline bool messageIsValid(radioMessage const & msg) { return msg.check == computeCheck(msg); }
-#endif RADIOMESSAGE_h
-
-
+#endif
 

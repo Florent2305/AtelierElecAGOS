@@ -1,58 +1,141 @@
+/**
+ * @file joypad.h
+ * @author Florent LERAY, Jérémy Lefort Besnard
+ * @date 2024-03-06
+ * @brief Définit la classe `joypad` pour lire les entrées du joystick et des boutons.
+ *
+ * Cette classe gère la lecture des axes et des boutons du joystick. Elle fournit également des fonctions pour le calibrage et l'accès à l'état des boutons individuels.
+ */
+
 #pragma once
 #ifndef JOYPAD_h
 #define JOYPAD_h
 
-#include "Arduino.h" 
+#include "Arduino.h"
 
-// Déclaration des boutons et des broches correspondantes
-#define pinBoutonA 2
-#define pinBoutonB 3
-#define pinBoutonC 4
-#define pinBoutonD 5
-#define pinBoutonE 6
-#define pinBoutonF 7
-#define pinBoutonK 8
+// **Déclaration des boutons et des broches correspondantes**
+#define pinBoutonA 2   ///< Broche du bouton A
+#define pinBoutonB 3   ///< Broche du bouton B
+#define pinBoutonC 4   ///< Broche du bouton C
+#define pinBoutonD 5   ///< Broche du bouton D
+#define pinBoutonE 6   ///< Broche du bouton E
+#define pinBoutonF 7   ///< Broche du bouton F
+#define pinBoutonK 8   ///< Broche du bouton K
 
-#define x_axis A0
-#define y_axis A1
+// **Broches des axes analogiques**
+#define x_axis A0       ///< Broche de l'axe X
+#define y_axis A1       ///< Broche de l'axe Y
 
+/**
+ * @class joypad
+ * @brief Classe pour lire les entrées du joystick et des boutons.
+ */
 class joypad
 {
-public:    
+public:
+    /**
+     * @brief Constructeur par défaut de la classe joypad
+     *
+     * Initialise les broches des boutons en entrée et définit les valeurs initiales pour les variables internes.
+     */
     joypad();
+
+    /**
+     * @brief Destructeur par défaut de la classe joypad
+     */
     ~joypad();
-    
+
+    /**
+     * @brief Calibrer le joystick
+     *
+     * Cette fonction effectue un calibrage du joystick en stockant les valeurs minimales et maximales lues sur les axes.
+     * @param pin La broche utilisée pour arrêter le calibrage (en appuyant dessus)
+     */
     void calibration(uint8_t const & pin);
-    
-    void    getAxis(uint8_t &x, uint8_t&y);
+
+    /**
+     * @brief Lire les valeurs des axes du joystick
+     *
+     * Cette fonction lit les valeurs des axes du joystick et les renvoie dans les variables passées en référence.
+     * @param x Variable de référence pour stocker la valeur de l'axe X en pourcentage
+     * @param y Variable de référence pour stocker la valeur de l'axe Y en pourcentage
+     */
+    void getAxis(int8_t &x, int8_t &y);
+
+    /**
+     * @brief Lire l'état de tous les boutons
+     *
+     * Cette fonction lit l'état de tous les boutons et renvoie un masque binaire représentant
+     * l'état de chaque bouton (1 pour pressé, 0 pour non pressé).
+     * @return Masque binaire représentant l'état de tous les boutons
+     */
     uint8_t getButton();
-    bool    getButton(uint8_t button) const;
-    
-    static inline readButton(uint8_t const &buttons, uint8_t const buttonName) {return buttons & (1<<(buttonName-2));}
-    
-    inline bool getButtonA(){return readButton(getButton(), pinBoutonA);}
-    inline bool getButtonB(){return readButton(getButton(), pinBoutonB);}
-    inline bool getButtonC(){return readButton(getButton(), pinBoutonC);}
-    inline bool getButtonD(){return readButton(getButton(), pinBoutonD);}
-    inline bool getButtonE(){return readButton(getButton(), pinBoutonE);}
-    inline bool getButtonF(){return readButton(getButton(), pinBoutonF);}
-    inline bool getButtonG(){return readButton(getButton(), pinBoutonK);}
-    
-    inline uint8_t changed(){return m_changed;}
+
+    /**
+     * @brief Lire l'état d'un bouton spécifique
+     *
+     * Cette fonction permet de lire l'état d'un bouton spécifique en fonction de sa broche.
+     * @param pin La broche du bouton dont on veut lire l'état
+     * @return true si le bouton est pressé, false sinon
+     */
+    bool getButton(uint8_t pin) const;
+    /**
+     * @brief Fonction utilitaire pour lire l'état d'un bouton spécifique en utilisant la fonction readButton
+     * @param buttonMap Masque binaire contenant l'état de tous les boutons
+     * @param pin La broche du bouton dont on veut lire l'état
+     * @return true si le bouton est pressé, false sinon
+     */
+    static inline bool readButton(uint8_t const &buttons, uint8_t const buttonName) { return (bool)(buttons & (1 << (buttonName - 2))); }
+
+    /**
+     * @brief Fonctions utilitaires pour lire l'état individuel de chaque bouton en utilisant la fonction readButton
+     */
+    inline bool getButtonA() { return readButton(getButton(), pinBoutonA); }
+    inline bool getButtonB() { return readButton(getButton(), pinBoutonB); }
+    inline bool getButtonC() { return readButton(getButton(), pinBoutonC); }
+    inline bool getButtonD() { return readButton(getButton(), pinBoutonD); }
+    inline bool getButtonE() { return readButton(getButton(), pinBoutonE); }
+    inline bool getButtonF() { return readButton(getButton(), pinBoutonF); }
+    inline bool getButtonG() { return readButton(getButton(), pinBoutonK); }
+
+    /**
+     * @brief Fonction utilitaire pour vérifier si l'état des boutons a changé
+     * @return true si l'état des boutons a changé, false sinon
+     */
+    inline uint8_t changed() { return m_changed; }
+
+    inline void check();
+
 private:
+    /**
+     * @brief Stocke l'état précédent des boutons
+     */
     uint8_t m_oldPressed;
+
+    /**
+     * @brief Indique si l'état des boutons a changé depuis la dernière lecture
+     */
     uint8_t m_changed;
-    
-    int16_t m_xMin;
+
+    /**
+     * @brief Valeurs minimale et maximale de l'axe X lues lors du calibrage
+     */
+    int16_t m_xOri;
     int16_t m_xMax;
-    int16_t m_yMin;
-    int16_t m_yMax;        
+
+    /**
+     * @brief Valeurs minimale et maximale de l'axe Y lues lors du calibrage
+     */
+    int16_t m_yOri;
+    int16_t m_yMax;
 };
 
 
 
+// **Définition du constructeur de la classe joypad**
 joypad::joypad()
 {
+    // Déclaration des broches en entrée pour les boutons
     pinMode(pinBoutonA, INPUT); // Déclare la pin/broche du bouton A comme entrée
     pinMode(pinBoutonB, INPUT); // Déclare la pin/broche du bouton B comme entrée
     pinMode(pinBoutonC, INPUT); // Déclare la pin/broche du bouton C comme entrée
@@ -60,69 +143,130 @@ joypad::joypad()
     pinMode(pinBoutonE, INPUT); // Déclare la pin/broche du bouton E comme entrée
     pinMode(pinBoutonF, INPUT); // Déclare la pin/broche du bouton F comme entrée
     pinMode(pinBoutonK, INPUT); // Déclare la pin/broche du bouton K comme entrée
-    
+
     m_oldPressed = 0;
     m_changed = 0;
-    
-    m_xMin = ((1 << 10) -1) >> 1;
-    m_xMax = (1 << 10) -1;
-    m_yMin = m_xMin;
-    m_yMax = m_xMax;
+
+    m_xOri = ((1 << 10) - 1) >> 1;   // Valeur initiale pour la valeur à l'origine de l'axe X
+    m_xMax = (1 << 10) - 1;          // Valeur initiale pour la valeur maximale de l'axe X
+    m_yOri = m_xOri;                 // Valeur initiale pour la valeur à l'origine de l'axe Y
+    m_yMax = m_xMax;                 // Valeur initiale pour la valeur maximale de l'axe Y
 }
 
-joypad::~joypad()
-{
-    
-}
+// **Définition du destructeur de la classe joypad (ne fait rien)**
+joypad::~joypad() {}
 
+// **Définition de la fonction de calibration**
 void joypad::calibration(uint8_t const & pin)
 {
-    m_xMin = analogRead(0);
-    m_yMin = analogRead(1);
-    
+    m_xOri = analogRead(A0);
+    m_yOri = analogRead(A1);
+
     m_xMax = 0;
     m_yMax = 0;
-    
+
     delayMicroseconds(500);
-    
-    while(digitalRead(pin))
+
+    // Attend que le bouton 'pin' soit pressé pour arrêter le calibrage
+    while (digitalRead(pin))
     {
-        int x = abs(analogRead(0));
-        int y = abs(analogRead(1));
-        
-        m_xMax = x>m_xMax ? x : m_xMax;
-        m_yMax = y>m_yMax ? y : m_yMax;
-    }    
+        int x = abs(analogRead(A0));
+        int y = abs(analogRead(A1));
+
+        m_xMax = x > m_xMax ? x : m_xMax;
+        m_yMax = y > m_yMax ? y : m_yMax;
+    }
 }
 
-void joypad::getAxis(uint8_t &x, uint8_t &y)
+// **Définition de la fonction de lecture des axes**
+void joypad::getAxis(int8_t &x, int8_t &y)
 {
-  auto ax = analogRead(0) - m_xMin;
-  auto ay = analogRead(1) - m_yMax;
+    int16_t ax = analogRead(A0) - m_xOri; // Valeur lue sur l'axe X corrigée par la valeur minimale
+    int16_t ay = analogRead(A1) - m_yOri; // Valeur lue sur l'axe Y corrigée par la valeur maximale
     
-	x = map(ax, -m_xMax, +m_xMax, -100, +100);  
-	y = map(ay, -m_yMax, +m_yMax, -100, +100);  
+    Serial.println(m_xOri);
+    Serial.println(m_yOri);
+    Serial.println(ax);
+    Serial.println(ay);
+
+    x = map(ax, -m_xMax, +m_xMax, -100, +100); // Mappage de la valeur de l'axe X entre -100 et 100
+    y = map(ay, -m_yMax, +m_yMax, -100, +100); // Mappage de la valeur de l'axe Y entre -100 et 100
+
+    Serial.println(x);
+    Serial.println(y);
 }
 
+// **Définition de la fonction de lecture de l'état de tous les boutons**
 uint8_t joypad::getButton()
 {
-	uint8_t buttonMap = ~((PORTD >> 2) & (PORTB << 6));
-    
+    // Combine les broches des boutons A à K dans un masque binaire
+    uint8_t buttonMap = ~((PINB >> 2) | (PIND << 6));
+    Serial.println(buttonMap, HEX);
+    Serial.println(PIND, HEX);
+    // Détecte les changements d'état par comparaison avec la lecture précédente
     m_changed = m_oldPressed ^ buttonMap;
     m_oldPressed = buttonMap;
-    
-	return buttonMap;
+
+    return buttonMap;
 }
 
+// **Définition de la fonction de lecture de l'état d'un bouton spécifique**
 bool joypad::getButton(uint8_t pin) const
 {
-	uint8_t bit  = digitalPinToBitMask(pin);
-	uint8_t port = digitalPinToPort(pin);
+    // Convertit la broche en masque binaire
+    uint8_t bit = digitalPinToBitMask(pin);
 
-	return static_cast<bool>(*portInputRegister(port) & bit);
+    // Récupère le port associé à la broche
+    uint8_t port = digitalPinToPort(pin);
+
+    // Lit l'état du bit correspondant à la broche et le renvoie sous forme de booléen
+    return static_cast<bool>(*portInputRegister(port) & bit);
 }
 
-#endif JOYPAD_h
+inline void joypad::check()
+{
+    char c = 0;
+    uint8_t boutons = 0;
+    int8_t x=0, y=0;
 
+    while(c != 'E')
+    {
+        if (Serial.available())
+        {
+            c = toupper(Serial.read());
+        }
 
+        getAxis(x, y);
+        //x = analogRead(A0);
+        //y = analogRead(A1);
+        boutons = getButton();
+
+        for(unsigned char i = 0; i<6; ++i)
+        {
+            Serial.print(F("Bouton "));
+            Serial.print((char)('A' + i));
+            Serial.print(F(" = "));
+            Serial.print((char)('0' + readButton(boutons, pinBoutonA + i)));
+            Serial.print('\n');
+        }
+            Serial.print('\n');
+            Serial.print(F("Bouton "));
+            Serial.print('K');
+            Serial.print(F(" = "));
+            Serial.print((char)('0' + readButton(boutons, pinBoutonK)));
+            Serial.print('\n');
+
+            Serial.print('\n');
+            Serial.print(F("X = "));
+            Serial.print(x);
+            Serial.print(F(" Y = "));
+            Serial.println(y);
+            Serial.print('\n');
+
+        delay(1000);
+    }
+
+}
+
+#endif
 
