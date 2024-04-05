@@ -13,18 +13,27 @@
 
 #include "Arduino.h"
 
-// **Déclaration des boutons et des broches correspondantes**
-#define pinBoutonA 2   ///< Broche du bouton A
-#define pinBoutonB 3   ///< Broche du bouton B
-#define pinBoutonC 4   ///< Broche du bouton C
-#define pinBoutonD 5   ///< Broche du bouton D
-#define pinBoutonE 6   ///< Broche du bouton E
-#define pinBoutonF 7   ///< Broche du bouton F
-#define pinBoutonK 8   ///< Broche du bouton K
+ // **Déclaration des boutons et des broches correspondantes**
+#define pinBoutonA 2 ///< Broche du bouton A
+#define pinBoutonB 3 ///< Broche du bouton B
+#define pinBoutonC 4 ///< Broche du bouton C
+#define pinBoutonD 5 ///< Broche du bouton D
+#define pinBoutonE 6 ///< Broche du bouton E
+#define pinBoutonF 7 ///< Broche du bouton F
+#define pinBoutonK 8 ///< Broche du bouton K
+
+ // **Déclaration des boutons et des broches correspondantes**
+#define maskBoutonA 0b00000001   ///< Masque binaire du bouton A
+#define maskBoutonB 0b00000010   ///< Masque binaire du bouton B
+#define maskBoutonC 0b00000100   ///< Masque binaire du bouton C
+#define maskBoutonD 0b00001000   ///< Masque binaire du bouton D
+#define maskBoutonE 0b00010000   ///< Masque binaire du bouton E
+#define maskBoutonF 0b00100000   ///< Masque binaire du bouton F
+#define maskBoutonK 0b01000000   ///< Masque binaire du bouton K
 
 // **Broches des axes analogiques**
-#define x_axis A0       ///< Broche de l'axe X
-#define y_axis A1       ///< Broche de l'axe Y
+#define x_axis A0 ///< Broche de l'axe X
+#define y_axis A1 ///< Broche de l'axe Y
 
 /**
  * @class joypad
@@ -52,6 +61,14 @@ public:
      * @param pin La broche utilisée pour arrêter le calibrage (en appuyant dessus)
      */
     void calibration(uint8_t const & pin);
+
+
+    /**
+     * @brief Calibrer le joystick au repos
+     *
+     * Cette fonction effectue un calibrage du centre du joystick en stockant les valeurs lues au repo sur les axes.
+     */
+    void lightCalibration();
 
     /**
      * @brief Lire les valeurs des axes du joystick
@@ -119,7 +136,7 @@ private:
 
     /**
      * @brief Valeurs minimale, à l'origine, et maximale de l'axe X lues lors du calibrage
-     */     
+     */
     int16_t m_xMin;
     int16_t m_xOri;
     int16_t m_xMax;
@@ -185,46 +202,44 @@ void joypad::calibration(uint8_t const & pin)
     }
 }
 
+// **Définition de la fonction de lightCalibration**
+void joypad::lightCalibration()
+{
+    m_xOri = analogRead(A0) >> 1;
+    m_yOri = analogRead(A1) >> 1;
+}
+
 // **Définition de la fonction de lecture des axes**
 void joypad::getAxis(int8_t &x, int8_t &y)
 {
     int16_t ax = analogRead(A0) >> 1; // Valeur lue sur l'axe X corrigée du LSB
     int16_t ay = analogRead(A1) >> 1; // Valeur lue sur l'axe Y corrigée du LSB
-    
-    Serial.println(m_xOri);
-    Serial.println(m_yOri);
-    Serial.println(ax);
-    Serial.println(ay);
 
-    if(ax < m_xOri)
+    if (ax < m_xOri)
     {
         x = map(ax, m_xMin, m_xOri, -100, 0); // Mappage de la valeur de l'axe X entre -100 et 0
     }
-    else 
+    else
     {
-        x = map(ax, m_xOri, m_xMax,  0, 100); // Mappage de la valeur de l'axe X entre   0 et 100
+        x = map(ax, m_xOri, m_xMax, 0, 100); // Mappage de la valeur de l'axe X entre   0 et 100
     }
 
-    if(ay < m_yOri)
+    if (ay < m_yOri)
     {
         y = map(ay, m_yMin, m_yOri, -100, 0); // Mappage de la valeur de l'axe Y entre -100 et 0
     }
-    else 
+    else
     {
-        y = map(ay, m_yOri, m_yMax,  0, 100); // Mappage de la valeur de l'axe Y entre   0 et 100
+        y = map(ay, m_yOri, m_yMax, 0, 100); // Mappage de la valeur de l'axe Y entre   0 et 100
     }
-
-    Serial.println(x);
-    Serial.println(y);
 }
 
 // **Définition de la fonction de lecture de l'état de tous les boutons**
 uint8_t joypad::getButton()
 {
     // Combine les broches des boutons A à K dans un masque binaire
-    uint8_t buttonMap = ~((PIND >> 2) | ((PINB << 6) ) );
-    Serial.println(buttonMap, HEX);
-    Serial.println(PIND, HEX);
+    uint8_t buttonMap = ~((PIND >> 2) | ((PINB << 6)));
+
     // Détecte les changements d'état par comparaison avec la lecture précédente
     m_changed = m_oldPressed ^ buttonMap;
     m_oldPressed = buttonMap;
@@ -249,9 +264,10 @@ inline void joypad::check()
 {
     char c = 0;
     uint8_t boutons = 0;
-    int8_t x=0, y=0;
+    int8_t x = 0, y = 0;
+    int8_t xOld = 0, yOld = 0;
 
-    while(c != 'E')
+    while (c != 'E')
     {
         if (Serial.available())
         {
@@ -259,35 +275,35 @@ inline void joypad::check()
         }
 
         getAxis(x, y);
-        //x = analogRead(A0);
-        //y = analogRead(A1);
         boutons = getButton();
 
-        for(unsigned char i = 0; i<6; ++i)
+        if(changed() != 0 || xOld != x || yOld != y)
         {
-            Serial.print(F("Bouton "));
-            Serial.print((char)('A' + i));
-            Serial.print(F(" = "));
-            Serial.print((char)('0' + readButton(boutons, pinBoutonA + i)));
-            Serial.print('\n');
-        }
+            for (unsigned char i = 0; i < 6; ++i)
+            {
+                Serial.print(F("Bouton "));
+                Serial.print((char)('A' + i));
+                Serial.print(F(" = "));
+                Serial.print((char)('0' + readButton(boutons, pinBoutonA + i)));
+                Serial.print('\n');
+            }
             Serial.print('\n');
             Serial.print(F("Bouton "));
             Serial.print('K');
             Serial.print(F(" = "));
             Serial.print((char)('0' + readButton(boutons, pinBoutonK)));
             Serial.print('\n');
-
+    
             Serial.print('\n');
             Serial.print(F("X = "));
             Serial.print(x);
             Serial.print(F(" Y = "));
             Serial.println(y);
             Serial.print('\n');
-
-        delay(500);
+    
+            delay(100);
+        }
     }
-
 }
 
 #endif

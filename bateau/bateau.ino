@@ -2,21 +2,24 @@
  * @file bateau.cpp
  * @author Votre nom (remplacez par votre nom)
  * @date 2024-03-06
- * @brief Point d'entrée principal du programme qui contrôle un bateau à l'aide d'une télécommande radio.
+ * @brief Point d'entrÃ©e principal du programme qui contrÃ©le un bateau Ã  l'aide d'une tÃ©lÃ©commande radio.
  *
- * Ce programme utilise une radio nRF24L01 pour recevoir des instructions de la télécommande et 
- * piloter les moteurs du bateau en conséquence. Il utilise également la librairie `pontH.h` pour 
- * contrôler les moteurs et la librairie `reboot.h` pour redémarrer le système si nécessaire.
+ * Ce programme utilise une radio nRF24L01 pour recevoir des instructions de la tÃ©lÃ©commande et 
+ * piloter les moteurs du bateau en consÃ©quence. Il utilise Ã©galement la librairie `pontH.h` pour 
+ * contrÃ©ler les moteurs et la librairie `reboot.h` pour redÃ©marrer le systÃ©me si nÃ©cessaire.
  */
+
+#define BATEAU_DEBUG
 
 #include <SPI.h>
 #include <RF24.h>
 
+#include "common.h"
 #include "radioMessage.h"
 #include "pontH.h"
 #include "reboot.h"
 
-// **Définition des broches utilisées**
+// **DÃ©finition des broches utilisÃ©es**
 #define moteurGauchePWM       6
 #define moteurDroitPWM        5
 #define moteurGaucheDirection 4
@@ -26,23 +29,23 @@
 #define CSN_PIN 8
 
 // **Variable pour stocker le timestamp**
-unsigned long time = 0;
+unsigned long time = 0;
 
 // **Objet pour la communication radio**
-RF24     radio(CE_PIN, CSN_PIN); // instantiate an object for the nRF24L01 transceiver
+RF24    radio(CE_PIN, CSN_PIN); // instantiate an object for the nRF24L01 transceiver
 
 // **Structure pour contenir le message radio**
 radioMessage msg;
 
 // **Objet pour piloter les moteurs**
-pontH    pont(moteurGauchePWM, moteurGaucheDirection, moteurDroitPWM, moteurDroitDirection);
+pontH    pont(moteurGauchePWM, moteurGaucheDirection, moteurDroitPWM, moteurDroitDirection);
 
 
-// **Tableaux contenant les adresses radio pour l'émetteur et le récepteur**
-uint8_t address[][6] = { "BOAT ", "REMOT" };
+// **Tableaux contenant les adresses radio pour l'Ã©metteur et le rÃ©cepteur**
+uint8_t address[][6] = { "1NODE", "2NODE" };
 
 // **Niveau de puissance de la radio**
-uint8_t radioPowerLevel = RF24_PA_MAX;
+uint8_t radioPowerLevel = RF24_PA_LOW;
 
 
 
@@ -51,67 +54,99 @@ uint8_t radioPowerLevel = RF24_PA_MAX;
  */
 void setup()
 {
-  // Arrêter les moteurs
+  delay(150);
+  #ifdef BATEAU_DEBUG
+  Serial.begin(115200); // Initialiser la communication sÃ©rie pour le dÃ©bogage
+  #endif
+
+
+  // ArrÃ©ter les moteurs
   pont.stopMoteurs();
 
   // Configurer la radio
-  radio.setPALevel(radioPowerLevel);
-  radio.setPayloadSize(sizeof(msg));  // Taille du message radio (défini dans radioMessage.h)
-  radio.openWritingPipe(address[1]);  // Configurer le canal d'émission
-  radio.openReadingPipe(1, address[0]); // Configurer le canal de réception
-  radio.startListening(); // Démarrer l'écoute radio
+  if (!radio.begin())
+  {
+    Serial.println(F("radio hardware is not responding!!"));
+    while (1) {}  // hold in infinite loop
+  }
+  // Set the PA Level low to try preventing power supply related problems
+  // because these examples are likely run with nodes in close proximity to
+  // each other.
+  radio.setPALevel(radioPowerLevel);  // RF24_PA_MAX is default.
 
-  #ifdef BATEAU_DEBUG
-  Serial.begin(9600); // Initialiser la communication série pour le débogage
-  #endif
+  // save on transmission time by setting the radio to only transmit the
+  // number of bytes we need to transmit a float
+  radio.setPayloadSize(sizeof(msg));  // float datatype occupies 4 bytes
+
+  // set the TX address of the RX node into the TX pipe
+  radio.openWritingPipe(address[1]);  // always uses pipe 0
+
+  // set the RX address of the TX node into a RX pipe
+  radio.openReadingPipe(1, address[0]);  // using pipe 1
+
+  radio.startListening();               // DÃ©marrer l'Ã©coute radio
+
 }
 
 /**
  * @brief Boucle principale du programme
  */
 void loop()
-{
-  // Mettre à jour le timestamp
-  time = millis();
-  uint8_t pipe;
-  if (radio.available(&pipe)) // Vérifier si un message est disponible
-  {
-    uint8_t bytes = radio.getPayloadSize(); // Obtenir
-    radio.read(&msg, bytes);                // Lire le message radio
+{  
 
-    if(messageIsValid(msg))// Vérifier la validité du message
+
+  uint8_t pipe;
+  //Serial.println("A");
+  if (radio.available(&pipe)) // VÃ©rifier si un message est disponible
+  {
+    //Serial.println("B");
+    uint8_t bytes = radio.getPayloadSize(); // Obtenir
+    radio.read(&msg, bytes);                 // Lire le message radio
+
+    //Serial.println("C");
+    //Serial.print(*reinterpret_cast<uint32_t*>(&msg), HEX);
+    if(messageIsValid(msg))// VÃ©rifier la validitÃ© du message
     {
-      controleBateau(msg.cmd); // Traiter la commande reçue
-      pont.vitesseMoteurs(msg.gauche, msg.droit); // Piloter les moteurs en fonction des vitesses reçues
+      // Mettre Ã  jour le timestamp
+      time = millis();
+      pont.vitesseMoteurs(msg.gauche, msg.droit); // Piloter les moteurs en fonction des vitesses reÃ§ues
+      controleBateau(msg.cmd);
     }
     else
     {
-      messageInvalid(); // Signaler la réception d'un message invalide
+      messageInvalid(); // Signaler la rÃ©ception d'un message invalide
     }
   }
+  else
+  {
+    //Serial.println("Radio not available");
+  }
 
-  // Arrêter les moteurs après 100ms d'inactivité radio
+
+  // ArrÃ©ter les moteurs aprÃ¨s 100ms d'inactivitÃ© radio
   if(millis() > time+100)
   {
     pont.stopMoteurs();
   }
+  //delay(50);
 }
 
 /**
- * @brief Fonction pour contrôler le bateau en fonction de la commande reçue
- * @param cmd La commande reçue de la télécommande
+ * @brief Fonction pour contrÃ©ler le bateau en fonction de la commande reÃ§ue
+ * @param cmd La commande reÃ§ue de la tÃ©lÃ©commande
  */
-void controleBateau(char &cmd)
+void controleBateau(char cmd)
 {
-  // Gérer la commande de redémarrage
-  if(cmd & radioCmd::RESET) reboot();
+  // GÃ©rer la commande de redÃ©marrage
+  if(cmd & radioCmd::RESET) reboot();
 
-  // Gérer la commande de changement de puissance radio
+  // GÃ©rer la commande de changement de puissance radio
   if(cmd & 0b111)
   {
-    radioPowerLevel = (cmd & radioCmd::PA_MIN) ? RF24_PA_MIN : radioPowerLevel;
-    radioPowerLevel = (cmd & radioCmd::PA_LOW) ? RF24_PA_LOW : radioPowerLevel;
-    radioPowerLevel = (cmd & radioCmd::PA_MAX) ? RF24_PA_MAX : radioPowerLevel;
+    radioPowerLevel = (cmd & radioCmd::PA_MIN) ? RF24_PA_MIN  : radioPowerLevel;
+    radioPowerLevel = (cmd & radioCmd::PA_LOW) ? RF24_PA_LOW  : radioPowerLevel;
+    radioPowerLevel = (cmd & radioCmd::PA_HI ) ? RF24_PA_HIGH : radioPowerLevel;
+    radioPowerLevel = (cmd & radioCmd::PA_MAX) ? RF24_PA_MAX  : radioPowerLevel;
     radio.setPALevel(radioPowerLevel);
 
 #ifdef BATEAU_DEBUG
@@ -128,7 +163,7 @@ void messageInvalid()
 {
 #ifdef BATEAU_DEBUG
   Serial.println("Reception d'un message invalid");
-  Serial.print((uint32_t)msg, HEX);
+  Serial.print(*reinterpret_cast<uint32_t*>(&msg), HEX);
   Serial.println();
 #endif
 }

@@ -6,8 +6,9 @@ typedef enum
 {
     PA_MIN = 1,
     PA_LOW = 2,
-    PA_MAX = 4,
-    RESET  = 8
+    PA_HI  = 4,
+    PA_MAX = 8,
+    RESET  = 16
 } radioCmd;
 
 
