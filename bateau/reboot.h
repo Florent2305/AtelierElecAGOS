@@ -24,7 +24,7 @@ void reboot()
     /**
      * @brief Affiche un message sur le port série indiquant que le système va redémarrer
      */
-    Serial.println(F("Redémarrage demandé"));
+    debugln(F("Redémarrage demandé"));
 
     /**
      * @brief Active le watchdog timer avec un délai de 15ms

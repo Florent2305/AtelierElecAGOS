@@ -69,11 +69,10 @@ uint8_t radioPowerLevel = RF24_PA_LOW;
  */
 void setup()
 {
-  delay(150);
-#ifdef BATEAU_DEBUG
-  Serial.begin(115200);
+  delay(1000); 
+  Serial.begin(115200); // Initialiser la communication série pour le débogage
   while (!Serial) {} // some boards need to wait to ensure access to serial over USB  
-#endif
+
   if (!radio.begin())
   {
     Serial.println(F("radio hardware is not responding!!"));
@@ -98,7 +97,6 @@ void setup()
   radio.stopListening();               // Démarrer l'écoute radio
 
   manette.lightCalibration();
-  Serial.println(F("Setup finish"));
 }
 
 /**
@@ -131,32 +129,32 @@ void loop()
     {
         msg.gauche = 100;
         msg.droit = -100;
-        Serial.println("Bouton A");
+        debugln("Bouton A");
     }
     if (boutons & 0b00000010)
     {
         msg.gauche = -100;
         msg.droit = 100;
-        Serial.println("Bouton B");
+        debugln("Bouton B");
     }
     if (boutons & 0b00000100)
     {
         manette.calibration(pinBoutonA);
-        Serial.println("Bouton C");
+        debugln("Bouton C");
     }
     if (boutons & 0b00001000)
     {
         //TODO
-        Serial.println("Bouton D");
+        debugln("Bouton D");
     }
     if (boutons & 0b00010000)
     {
-        Serial.println("Bouton E");
+        debugln("Bouton E");
         msg.cmd = radioCmd::RESET;
     }
     if (boutons & 0b00100000)
     {
-        Serial.println("Bouton F");
+        debugln("Bouton F");
         reboot();
     }
 

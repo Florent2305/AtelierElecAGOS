@@ -154,11 +154,7 @@ inline void pontH::vitesseMoteurs(int8_t const &gauche, int8_t const &droit)
 * Cette fonction arréte les deux moteurs en mettant les broches PWM à LOW et les broches de direction à LOW.
 */
 inline void pontH::stopMoteurs()
-{
-//#ifdef BATEAU_DEBUG
-//    Serial.print(F("Arrét du bateau\n"));
-//#endif
-    
+{    
     debugln(F("Arrét du bateau"));
     digitalWrite(m_pwmPin[0], LOW);
     digitalWrite(m_pwmPin[1], LOW);

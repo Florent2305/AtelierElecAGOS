@@ -54,10 +54,10 @@ uint8_t radioPowerLevel = RF24_PA_LOW;
  */
 void setup()
 {
-  delay(150);
-  #ifdef BATEAU_DEBUG
+  delay(1000);
   Serial.begin(115200); // Initialiser la communication série pour le débogage
-  #endif
+  while (!Serial) {} // some boards need to wait to ensure access to serial over USB  
+
 
 
   // Arréter les moteurs
@@ -96,15 +96,12 @@ void loop()
 
 
   uint8_t pipe;
-  //Serial.println("A");
+  
   if (radio.available(&pipe)) // Vérifier si un message est disponible
   {
-    //Serial.println("B");
     uint8_t bytes = radio.getPayloadSize(); // Obtenir
     radio.read(&msg, bytes);                 // Lire le message radio
 
-    //Serial.println("C");
-    //Serial.print(*reinterpret_cast<uint32_t*>(&msg), HEX);
     if(messageIsValid(msg))// Vérifier la validité du message
     {
       // Mettre à jour le timestamp
@@ -119,7 +116,7 @@ void loop()
   }
   else
   {
-    //Serial.println("Radio not available");
+    debugln("Radio not available");
   }
 
 
@@ -128,7 +125,6 @@ void loop()
   {
     pont.stopMoteurs();
   }
-  //delay(50);
 }
 
 /**
@@ -149,9 +145,8 @@ void controleBateau(char cmd)
     radioPowerLevel = (cmd & radioCmd::PA_MAX) ? RF24_PA_MAX  : radioPowerLevel;
     radio.setPALevel(radioPowerLevel);
 
-#ifdef BATEAU_DEBUG
-    Serial.print(F("RF24_PA change"));
-    Serial.println(radioPowerLevel);
+    debug(F("RF24_PA change "));
+    debugln(radioPowerLevel);
 #endif
   }
 }
@@ -161,9 +156,7 @@ void controleBateau(char cmd)
  */
 void messageInvalid()
 {
-#ifdef BATEAU_DEBUG
-  Serial.println("Reception d'un message invalid");
-  Serial.print(*reinterpret_cast<uint32_t*>(&msg), HEX);
-  Serial.println();
-#endif
+  debugln("Reception d'un message invalid");
+  debug(*reinterpret_cast<uint32_t*>(&msg), HEX);
+  debugln();
 }
