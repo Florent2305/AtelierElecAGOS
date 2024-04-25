@@ -186,7 +186,7 @@ void joypad::calibration(uint8_t const & pin)
     m_xMax = 0;
     m_yMax = 0;
 
-    delayMicroseconds(500);
+    delayMicroseconds(2000);
 
     // Attend que le bouton 'pin' soit pressé pour arrêter le calibrage
     while (digitalRead(pin))

@@ -41,6 +41,8 @@ private:
     uint8_t m_regimeMinimum;  /// Vitesse minimum autre que 0 pour un moteur. Exprimer en ratio PWM entre 0 et 255. Par défault 127.
     uint8_t m_overBoostDelay; /// Délai d'overdrive de référence quand un moteur est à sont régime minimum
     uint8_t m_vitesse[2];     /// Tableau stockant la vitesse des moteurs
+    uint8_t m_pwmOld[2];
+    bool    m_directionOld[2];
 };
 
 
@@ -98,7 +100,7 @@ inline pontH::pontH(int pwmGauchePin, int directionGauchePin, int pwmDroitePin, 
 *
 * Cette fonction permet de définir le régime minimum des moteurs.
 *
-* @param regimeMinimum Valeur du régime minimum (comprise entre 0 et 255)
+* @param regimeMinimum [In] Valeur du régime minimum (comprise entre 0 et 255)
 */
 inline void pontH::setRegimeMinimum(uint8_t regimeMinimum) { m_regimeMinimum = regimeMinimum; }
 
@@ -108,7 +110,7 @@ inline void pontH::setRegimeMinimum(uint8_t regimeMinimum) { m_regimeMinimum = r
 * Cette fonction permet de définir le délai d'overboost des moteurs en millisecondes. Ce délai est appliqué
 * lors de la variation de la vitesse des moteurs pour éviter une surintensité.
 *
-* @param overBoostDelay Délai d'overboost en millisecondes
+* @param overBoostDelay [In] Délai d'overboost en millisecondes
 */
 inline void pontH::setOverBoostDelay(uint8_t overBoostDelay) { m_overBoostDelay = overBoostDelay; }
 
@@ -117,8 +119,8 @@ inline void pontH::setOverBoostDelay(uint8_t overBoostDelay) { m_overBoostDelay 
  *
  * Cette fonction définit la vitesse des deux moteurs en fonction des valeurs de vitesse fournies
  * pour la direction gauche et droite. Les valeurs de vitesse doivent être comprises entre -100 et 100.
- * @param gauche Vitesse du moteur gauche (-100 pour la vitesse maximale en arrière, 0 pour à l'arrét, 100 pour la vitesse maximale en avant)
- * @param droit  Vitesse du moteur droit  (-100 pour la vitesse maximale en arrière, 0 pour à l'arrét, 100 pour la vitesse maximale en avant)
+ * @param gauche [In] Vitesse du moteur gauche (-100 pour la vitesse maximale en arrière, 0 pour à l'arrét, 100 pour la vitesse maximale en avant)
+ * @param droit  [In] Vitesse du moteur droit  (-100 pour la vitesse maximale en arrière, 0 pour à l'arrét, 100 pour la vitesse maximale en avant)
  */
 inline void pontH::vitesseMoteurs(int8_t const &gauche, int8_t const &droit)
 {
@@ -137,10 +139,13 @@ inline void pontH::vitesseMoteurs(int8_t const &gauche, int8_t const &droit)
     computeOverDriveDelay(0, pwmGauche, directionGauche, delaiGauche);
     computeOverDriveDelay(1, pwmDroite, directionDroite, delaiDroite);
 
+    m_pwmOld[0] = pwmGauche;
+    m_pwmOld[1] = pwmDroite;
+    m_directionOld[0] = directionGauche;
+    m_directionOld[1] = directionDroite;
 
     pwmGauche = directionGauche ? pwmGauche : 255 - pwmGauche;
     pwmDroite = directionDroite ? pwmDroite : 255 - pwmDroite;
-
 
     applyDrive(pwmGauche, directionGauche, delaiGauche, pwmDroite, directionDroite, delaiDroite);
 
@@ -175,9 +180,9 @@ inline void pontH::stopMoteurs()
  *
  * Cette fonction interne calcule la configuration d'un moteur en fonction de la valeur de vitesse fournie.
  *
- * @param vitesse [in, out] Vitesse du moteur (-100 pour la vitesse maximale en arrière, 0 pour à l'arrêt, 100 pour la vitesse maximale en avant)
- * @param pwm [out] Valeur à écrire sur la broche PWM du moteur
- * @param direction [out] Direction du moteur (true pour avancer, false pour reculer)
+ * @param vitesse   [in, out] Vitesse du moteur (-100 pour la vitesse maximale en arrière, 0 pour à l'arrêt, 100 pour la vitesse maximale en avant)
+ * @param pwm       [out]     Valeur à écrire sur la broche PWM du moteur
+ * @param direction [out]     Direction du moteur (true pour avancer, false pour reculer)
  */
 inline void pontH::speedToPwmDirection(int8_t &vitesse, uint8_t &pwm, bool &direction)
 {
@@ -202,9 +207,9 @@ inline void pontH::speedToPwmDirection(int8_t &vitesse, uint8_t &pwm, bool &dire
  *
  * Cette fonction interne calcule le délai d'overdrive à appliquer à un moteur en fonction de la variation de sa vitesse.
  *
- * @param leftRight Indice du moteur (0 pour gauche, 1 pour droit)
- * @param pwm Vitesse du moteur
- * @param delai Variable dans laquelle stocker le délai d'overdrive calculé
+ * @param leftRight [In]  Indice du moteur (0 pour gauche, 1 pour droit)
+ * @param pwm       [In]  Vitesse du moteur
+ * @param delai     [Out] Variable dans laquelle stocker le délai d'overdrive calculé
  */
 inline void pontH::computeOverDriveDelay(int const leftRight, uint8_t const & pwm, bool direction, int8_t & delai)
 {
@@ -213,37 +218,36 @@ inline void pontH::computeOverDriveDelay(int const leftRight, uint8_t const & pw
     if(pwm)
     {
         int8_t vitesseOld = m_vitesse[leftRight];
-        uint8_t pwmOld = 0;
-        bool   directionOld = false;
+        //uint8_t pwmOld = 0;
+        //bool   directionOld = false;
 
-        speedToPwmDirection(vitesseOld, pwmOld, directionOld);
-        debugln("********");
-        debugln(pwm);
-        debugln(direction);
-        debugln("-----");
-        debugln(vitesseOld);
-        debugln(pwmOld);
-        debugln(directionOld);
-        if(directionOld != direction || pwmOld == 0)
+        m_pwmOld[leftRight];
+        m_directionOld[leftRight];
+
+        //speedToPwmDirection(vitesseOld, pwmOld, directionOld);
+        //debugln("********");
+        //debugln(pwm);
+        //debugln(direction);
+        //debugln("-----");
+        //debugln(m_vitesse[leftRight]);
+        //debugln(m_pwmOld[leftRight]);
+        //debugln(m_directionOld[leftRight]);
+        if(m_directionOld[leftRight] != direction || m_pwmOld[leftRight] == 0)
         {
             uint8_t pwmDiff = pwm - m_regimeMinimum;
             delai = map(pwmDiff, m_regimeMinimum, 0, 0, m_overBoostDelay);
-            debugln(delai); 
+            //debugln(delai); 
         }
         else
         {
-            debugln("Drection is same");            
+            //debugln("Drection is same");            
         }
-        debugln("********");
+        //debugln("********");
     }
     else
     {
         //debugln("pwm=0");
     }
-
-
-
-
 }
 
 /**
@@ -252,12 +256,12 @@ inline void pontH::computeOverDriveDelay(int const leftRight, uint8_t const & pw
  * Cette fonction interne applique la configuration calculée pour les deux moteurs (vitesse et direction)
  * aux broches PWM et de direction. Elle tient compte du délai d'overdrive si nécessaire.
  *
- * @param pwmGauche Valeur à écrire sur la broche PWM du moteur gauche
- * @param directionGauche Direction du moteur gauche (true pour avancer, false pour reculer)
- * @param overdriveDelaiGauche Délai d'overdrive calculé pour le moteur gauche
- * @param pwmDroit Valeur à écrire sur la broche PWM du moteur droit
- * @param directionDroite Direction du moteur droit (true pour avancer, false pour reculer)
- * @param overdriveDelaiDroit Délai d'overdrive calculé pour le moteur droit
+ * @param pwmGauche            [In] Valeur à écrire sur la broche PWM du moteur gauche
+ * @param directionGauche      [In] Direction du moteur gauche (true pour avancer, false pour reculer)
+ * @param overdriveDelaiGauche [In] Délai d'overdrive calculé pour le moteur gauche
+ * @param pwmDroit             [In] Valeur à écrire sur la broche PWM du moteur droit
+ * @param directionDroite      [In] Direction du moteur droit (true pour avancer, false pour reculer)
+ * @param overdriveDelaiDroit  [In] Délai d'overdrive calculé pour le moteur droit
  */
 inline void pontH::applyDrive(uint8_t & pwmGauche, bool & directionGauche, int8_t & overdriveDelaiGauche, uint8_t & pwmDroit, bool & directionDroite, int8_t & overdriveDelaiDroit)
 {

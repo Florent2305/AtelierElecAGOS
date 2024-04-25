@@ -58,10 +58,11 @@ void setup()
   Serial.begin(115200); // Initialiser la communication série pour le débogage
   while (!Serial) {} // some boards need to wait to ensure access to serial over USB  
 
-
+  debugln("coucou");
 
   // Arréter les moteurs
   pont.stopMoteurs();
+
 
   // Configurer la radio
   if (!radio.begin())
@@ -69,6 +70,7 @@ void setup()
     Serial.println(F("radio hardware is not responding!!"));
     while (1) {}  // hold in infinite loop
   }
+  debugln("coucou2");
   // Set the PA Level low to try preventing power supply related problems
   // because these examples are likely run with nodes in close proximity to
   // each other.
@@ -78,13 +80,16 @@ void setup()
   // number of bytes we need to transmit a float
   radio.setPayloadSize(sizeof(msg));  // float datatype occupies 4 bytes
 
+
   // set the TX address of the RX node into the TX pipe
   radio.openWritingPipe(address[1]);  // always uses pipe 0
 
   // set the RX address of the TX node into a RX pipe
   radio.openReadingPipe(1, address[0]);  // using pipe 1
+  debugln("coucou3");
 
   radio.startListening();               // Démarrer l'écoute radio
+  debugln("coucou4");
 
 }
 
@@ -92,9 +97,8 @@ void setup()
  * @brief Boucle principale du programme
  */
 void loop()
-{  
-
-
+{
+  //while(1);
   uint8_t pipe;
   
   if (radio.available(&pipe)) // Vérifier si un message est disponible
@@ -106,6 +110,9 @@ void loop()
     {
       // Mettre à jour le timestamp
       time = millis();
+      debug((int)msg.gauche);
+      debug(", ");
+      debugln((int)msg.droit);
       pont.vitesseMoteurs(msg.gauche, msg.droit); // Piloter les moteurs en fonction des vitesses reçues
       controleBateau(msg.cmd);
     }
@@ -147,7 +154,6 @@ void controleBateau(char cmd)
 
     debug(F("RF24_PA change "));
     debugln(radioPowerLevel);
-#endif
   }
 }
 

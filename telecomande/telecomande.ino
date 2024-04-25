@@ -14,6 +14,7 @@
 #include <RF24.h>
 #include <math.h>
 
+#include "common.h"       // Inclure la 
 #include "joypad.h"       // Inclure la bibliothèque joystick
 #include "radioMessage.h" // Inclure la définition de la structure du message radio
 #include "reboot.h"       // Inclure la fonction de redémarrage
@@ -82,7 +83,7 @@ void setup()
   // Set the PA Level low to try preventing power supply related problems
   // because these examples are likely run with nodes in close proximity to
   // each other.
-  radio.setPALevel(RF24_PA_LOW);  // RF24_PA_MAX is default.
+  radio.setPALevel(radioPowerLevel);  // RF24_PA_MAX is default.
 
   // save on transmission time by setting the radio to only transmit the
   // number of bytes we need to transmit a float
@@ -94,7 +95,7 @@ void setup()
   // set the RX address of the TX node into a RX pipe
   radio.openReadingPipe(1, address[1]);  // using pipe 1
 
-  radio.stopListening();               // Démarrer l'écoute radio
+  radio.stopListening();               // Démarrer la possibilité d'envois de messages radio
 
   manette.lightCalibration();
 }
@@ -107,52 +108,71 @@ void setup()
  */
 void loop()
 {    
-	int8_t x = 0;
-	int8_t y = 0;
+	  int8_t x = 0;
+	  int8_t y = 0;
+    msg.cmd = 0;
 	
     /**
      * @brief Lit les valeurs des axes du joystick et les stocke dans la structure du message
      */
     manette.getAxis(x, y);
-
+    debug("x");
+    debug((int)x);
+    debug(", y");
+    debugln((int)y);
+    
     /**
      * @brief Lit le masque binaire des boutons pressés
      */
     boutons = manette.getButton();
 
     joystickToMotors(x, y, &msg.gauche, &msg.droit);
+    
+    debug("g");
+    debug((int)msg.gauche);
+    debug(", d");
+    debugln((int)msg.droit);
+    debugln();
 
     /**
      * @brief Traite les événements de pression sur les boutons en fonction de leur position binaire
      */
-    if (boutons & 0b00000001)
+    if (boutons & maskBoutonA)
     {
+        debugln("Bouton A");
+        //manette.calibration(pinBoutonA);
+    }
+    if (boutons & maskBoutonB)
+    {
+        debugln("Bouton B");
         msg.gauche = 100;
         msg.droit = -100;
-        debugln("Bouton A");
     }
-    if (boutons & 0b00000010)
+    if (boutons & maskBoutonC)
     {
+        debugln("Bouton C");
+        radioPowerLevel = (radioPowerLevel + 1) % 4;
+        switch (radioPowerLevel) // assige la puissance pour le tranceiver du bateau
+        {
+        case 0: msg.cmd |= PA_MIN; break;
+        case 1: msg.cmd |= PA_LOW; break;
+        case 2: msg.cmd |= PA_HI ; break;
+        case 3: msg.cmd |= PA_MAX; break;
+        }
+        radio.setPALevel(radioPowerLevel); // assige la puissance pour le tranceiver de la telecomande
+    }
+    if (boutons & maskBoutonD)
+    {
+        debugln("Bouton D");
         msg.gauche = -100;
         msg.droit = 100;
-        debugln("Bouton B");
     }
-    if (boutons & 0b00000100)
-    {
-        manette.calibration(pinBoutonA);
-        debugln("Bouton C");
-    }
-    if (boutons & 0b00001000)
-    {
-        //TODO
-        debugln("Bouton D");
-    }
-    if (boutons & 0b00010000)
+    if (boutons & maskBoutonE)
     {
         debugln("Bouton E");
         msg.cmd = radioCmd::RESET;
     }
-    if (boutons & 0b00100000)
+    if (boutons & maskBoutonF)
     {
         debugln("Bouton F");
         reboot();
@@ -164,9 +184,9 @@ void loop()
      */
     if (!radio.write(&msg, sizeof(msg)))
     {
-      Serial.println(F("msg not send"));
+      //Serial.println(F("msg not send"));
     }
-    delay(200);
+    delay(100);
 }
 
 
@@ -184,12 +204,20 @@ void loop()
 void joystickToMotors(int x, int y, char *left, char *right)
 {
     // Calcul de l'angle du joystick
-    float angle = atan2(y, x) * 180 / M_PI;
+    float angle = atan2(((double)y)/100.0, ((double)x)/100.0) ;
 
+    debug("angle");
+    debugln(angle);
+    debugln(angle * 180 / M_PI);
     // Calcul de la magnitude du mouvement du joystick
-    float magnitude = sqrt(pow(x, 2) + pow(y, 2));
+    float magnitude = sqrt(x*x + y*y);
+    magnitude = magnitude > 100 ? 100 : magnitude;
+    debug("magnitude");
+    debugln(magnitude);
 
     // Conversion de l'angle et de la magnitude en valeurs pour les moteurs
-    *left  = (char)(magnitude * cos(angle + 45));
-    *right = (char)(magnitude * sin(angle + 45));
+    debugln(100 * sin(angle));
+    debugln(100 * sin(angle));
+    *left  = (char)(y * sin(angle + M_PI/2));
+    *right = (char)(y * cos(angle + M_PI/2));
 }
