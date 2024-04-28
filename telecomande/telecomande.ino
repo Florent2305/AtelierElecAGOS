@@ -14,12 +14,11 @@
 #include <RF24.h>
 #include <math.h>
 
-#include "common.h"       // Inclure la 
-#include "joypad.h"       // Inclure la bibliothèque joystick
-#include "radioMessage.h" // Inclure la définition de la structure du message radio
-#include "reboot.h"       // Inclure la fonction de redémarrage
-
-void joystickToMotors(int x, int y, int *left, int *right);
+#include "common.h"           // Inclure la 
+#include "joypad.h"           // Inclure la bibliothèque joystick
+#include "joystickToMotors.h" // Inclure la bibliothèque de conversion joystick ver moteurs
+#include "radioMessage.h"     // Inclure la définition de la structure du message radio
+#include "reboot.h"           // Inclure la fonction de redémarrage
 
 /**
  * @brief Broche CE (Chip Enable) connectée à l'émetteur-récepteur radio nRF24L01
@@ -37,9 +36,19 @@ void joystickToMotors(int x, int y, int *left, int *right);
 RF24 radio(CE_PIN, CSN_PIN);
 
 /**
- * @brief Objet joystick
+ * @brief Objet joypad
  */
 joypad manette;
+
+/**
+ * @brief Objet joystick vers moteurs
+ */
+joystickToMotors jm;
+
+/**
+ * @brief Algo du mapping joystick vers moteurs
+ */
+joystickToMotors::mapping mapping = joystickToMotors::smooth;
 
 /**
  * @brief Structure du message radio
@@ -110,6 +119,8 @@ void loop()
 {    
 	  int8_t x = 0;
 	  int8_t y = 0;
+	  int8_t g = 0;
+	  int8_t d = 0;
     msg.cmd = 0;
 	
     /**
@@ -126,7 +137,9 @@ void loop()
      */
     boutons = manette.getButton();
 
-    joystickToMotors(x, y, &msg.gauche, &msg.droit);
+    jm.convert(x, y, g, d);
+    msg.gauche = g;
+    msg.droit  = d;
     
     debug("g");
     debug((int)msg.gauche);
@@ -140,7 +153,7 @@ void loop()
     if (boutons & maskBoutonA)
     {
         debugln("Bouton A");
-        //manette.calibration(pinBoutonA);
+        manette.calibration(pinBoutonA);
     }
     if (boutons & maskBoutonB)
     {
@@ -177,6 +190,12 @@ void loop()
         debugln("Bouton F");
         reboot();
     }
+    if (boutons & maskBoutonK)
+    {
+        debugln("Bouton K");
+        mapping = (joystickToMotors::mapping)((uint8_t)mapping+1 % joystickToMotors::mappinEnumSize);
+        jm.changeMapping(mapping);
+    }
 
     assignCheck(msg);
     /**
@@ -187,37 +206,4 @@ void loop()
       //Serial.println(F("msg not send"));
     }
     delay(100);
-}
-
-
-/**
- * @brief Convertit les valeurs X et Y du joystick en valeurs pour les moteurs gauche et droit.
- *
- * Cette fonction utilise des fonctions trigonométriques pour calculer la direction et la magnitude du mouvement du joystick, 
- * puis les convertit en valeurs pour les moteurs gauche et droit.
- *
- * @param x Valeur X du joystick (comprise entre -100 et +100)
- * @param y Valeur Y du joystick (comprise entre -100 et +100)
- * @param left Pointeur vers la variable qui stockera la valeur du moteur gauche
- * @param right Pointeur vers la variable qui stockera la valeur du moteur droit
- */
-void joystickToMotors(int x, int y, char *left, char *right)
-{
-    // Calcul de l'angle du joystick
-    float angle = atan2(((double)y)/100.0, ((double)x)/100.0) ;
-
-    debug("angle");
-    debugln(angle);
-    debugln(angle * 180 / M_PI);
-    // Calcul de la magnitude du mouvement du joystick
-    float magnitude = sqrt(x*x + y*y);
-    magnitude = magnitude > 100 ? 100 : magnitude;
-    debug("magnitude");
-    debugln(magnitude);
-
-    // Conversion de l'angle et de la magnitude en valeurs pour les moteurs
-    debugln(100 * sin(angle));
-    debugln(100 * sin(angle));
-    *left  = (char)(y * sin(angle + M_PI/2));
-    *right = (char)(y * cos(angle + M_PI/2));
 }
