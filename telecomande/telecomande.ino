@@ -58,7 +58,7 @@ radioMessage msg;
 /**
  * @brief Adresses pour l'émetteur et le récepteur
  */
-uint8_t address[][6] = { "1NODE", "2NODE" };
+uint8_t address[][6] = { "jlb37", "jlb86" };
 
 /**
  * @brief Stocke le masque binaire des boutons pressés
@@ -127,10 +127,10 @@ void loop()
      * @brief Lit les valeurs des axes du joystick et les stocke dans la structure du message
      */
     manette.getAxis(x, y);
-    debug("x");
-    debug((int)x);
-    debug(", y");
-    debugln((int)y);
+    // debug("x");
+    // debug((int)x);
+    // debug(", y");
+    // debugln((int)y);
     
     /**
      * @brief Lit le masque binaire des boutons pressés
@@ -141,11 +141,11 @@ void loop()
     msg.gauche = g;
     msg.droit  = d;
     
-    debug("g");
-    debug((int)msg.gauche);
-    debug(", d");
-    debugln((int)msg.droit);
-    debugln();
+    // debug("g");
+    // debug((int)msg.gauche);
+    // debug(", d");
+    // debugln((int)msg.droit);
+    // debugln();
 
     /**
      * @brief Traite les événements de pression sur les boutons en fonction de leur position binaire
@@ -193,8 +193,11 @@ void loop()
     if (boutons & maskBoutonK)
     {
         debugln("Bouton K");
-        mapping = (joystickToMotors::mapping)((uint8_t)mapping+1 % joystickToMotors::mappinEnumSize);
+        mapping = (joystickToMotors::mapping)((uint8_t)(mapping+1) % joystickToMotors::mappinEnumSize);
         jm.changeMapping(mapping);
+        debugln(mapping);
+        delay(50);
+
     }
 
     assignCheck(msg);

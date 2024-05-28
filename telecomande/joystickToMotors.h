@@ -40,7 +40,7 @@ private:
     inline void xyToPolar(int8_t x, int8_t y, double &angle, uint8_t &magnitude) const;
     inline void polaireToMotor(double angle, int8_t magnitude, int8_t &g, int8_t &d) const;
 
-    inline void simpleConeversion(long uAngle, long &g, long &d) const;
+    inline void simpleConversion(long uAngle, long &g, long &d) const;
     inline void smoothConversion(long uAngle, long &g, long &d) const;
 
 private:
@@ -114,7 +114,7 @@ inline void joystickToMotors::polaireToMotor(double angle, int8_t magnitude, int
 
     switch (m_algo)
     {
-        case simple: simpleConeversion(uAngle, gauche, droit); break;
+        case simple: simpleConversion(uAngle, gauche, droit); break;
         case smooth: smoothConversion(uAngle, gauche, droit); break;
         default: break; // Gestion d'erreur pour un algorithme inconnu
     }
@@ -132,7 +132,7 @@ inline void joystickToMotors::polaireToMotor(double angle, int8_t magnitude, int
  * @param g Référence vers la variable qui recevra la commande pour le moteur gauche (modifié)
  * @param d Référence vers la variable qui recevra la commande pour le moteur droit (modifié)
  */
-inline void joystickToMotors::simpleConeversion(long uAngle, long &g, long &d) const
+inline void joystickToMotors::simpleConversion(long uAngle, long &g, long &d) const
 {
     if (uAngle < 90)
     {
